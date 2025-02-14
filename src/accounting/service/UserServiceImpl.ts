@@ -2,12 +2,15 @@ import UserService from "./UserService";
 import NewUserDto from "../dto/NewUserDto";
 import UserDto from "../dto/UserDto";
 import {User} from "../model/User";
-import {NotFoundError} from "routing-controllers";
+import {ForbiddenError, NotFoundError} from "routing-controllers";
+import {decodeBase64, encodeBase64} from "../utils/utilsForPasssword";
 
 export default class UserServiceImpl implements UserService{
     async register(newUserDto: NewUserDto): Promise<UserDto> {
+        let encodePass = encodeBase64(newUserDto.password);
         const newUser = new User({
-            ...newUserDto
+            ...newUserDto,
+            password: encodePass
         });
         const res = await newUser.save();
         return new UserDto(res.login, res.firstName, res.lastName, res.roles);
@@ -65,6 +68,20 @@ export default class UserServiceImpl implements UserService{
         );
         if (user === null) {
             throw new NotFoundError(`User with login ${login} not found`);
+        }
+        return new UserDto(user.login, user.firstName, user.lastName, user.roles);
+    }
+
+    async login(token: string): Promise<UserDto> {
+        const [login, password] = decodeBase64((token.split(" "))[1]).split(":");
+        const user = await User.findOne({login: login});
+        if (user === null) {
+            throw new NotFoundError(`User with login ${login} not found`);
+        }
+        const pass = user.password;
+        const encodePass = encodeBase64(password);
+        if(pass !== encodePass) {
+            throw new ForbiddenError('Password not valid');
         }
         return new UserDto(user.login, user.firstName, user.lastName, user.roles);
     }

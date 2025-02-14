@@ -16,4 +16,6 @@ export default interface UserService {
     addUserRole(login: string, role: string): Promise<UserDto>;
 
     removeRole(login: string, role: string): Promise<UserDto>;
+
+    login(token: string): Promise<UserDto>;
 }

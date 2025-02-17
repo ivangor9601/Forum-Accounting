@@ -1,30 +1,22 @@
 export default function AuthorizationMiddleware(roles?: string) {
     return async (request: any, response: any, next: (err?: any) => any): Promise<any> => {
-        const key = Object.keys(request.params)[0];
+        const unauthorised = () => response.status(403).send("Unauthorized action");
+        const isAdmin = request.user.roles.includes('Administrator');
+        const isMod = request.user.roles.includes('Moderator');
+        const isOwner = request.params[Object.keys(request.params)[0]] === request.user.login;
+
         switch (roles) {
             case 'admin only':
-                request.user.roles.includes('Administrator') ? next() :
-                    response.status(403).send("Unauthorized action (needs admin role)");
+                isAdmin ? next() : unauthorised();
                 break;
             case 'admin or owner':
-                if (request.user.roles.includes('Administrator') ||
-                    (request.params[key] === request.user.login)){
-                    next();
-                } else {
-                    response.status(403).send("Unauthorized action");
-                }
+                (isAdmin || isOwner) ? next() : unauthorised();
                 break;
             case 'mod or owner':
-                if (request.user.roles.includes('Moderator') ||
-                    (request.params[key] === request.user.login)){
-                    next();
-                } else {
-                    response.status(403).send("Unauthorized action");
-                }
+                (isMod || isOwner) ? next() : unauthorised();
                 break;
             default:
-                request.params[key] === request.user.login ? next() :
-                    response.status(403).send("Unauthorized action");
+                isOwner ? next() : unauthorised();
                 break;
         }
     }
